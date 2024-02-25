@@ -1,0 +1,13 @@
+# object file
+*.o
+
+# exe file
+proj
+
+# other
+*.json
+
+# directory
+!/**/
+
+/.cache/
