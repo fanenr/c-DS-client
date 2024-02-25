@@ -4,6 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __linux__
+#include <termios.h>
+#include <unistd.h>
+#endif
+
 FILE *file_menu;
 FILE *file_student;
 FILE *file_merchant;
@@ -31,6 +36,13 @@ void
 check_and_init (void)
 {
   setlocale (LC_ALL, "en_US.utf8");
+
+#ifdef __linux__
+  struct termios termios;
+  tcgetattr (STDIN_FILENO, &termios);
+  termios.c_lflag &= ~(ICANON);
+  tcsetattr (STDIN_FILENO, TCSANOW, &termios);
+#endif
 
   file_menu = check_and_init_file (PATH_TABLE_MENU);
   file_student = check_and_init_file (PATH_TABLE_STUDENT);
