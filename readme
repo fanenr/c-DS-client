@@ -1,0 +1,9 @@
+要求：
+  1. gcc (要求支持 C11)
+  2. GNU make
+
+构建：
+  make
+
+1. 使用了 json 库 jansson, 构建前请先在系统中安装
+2. TUI 中部分特性用到了 Posix 接口, 但是非 Unix-Like 系统也能编译, 可能就是效果差点
