@@ -1,7 +1,9 @@
 #include "page.h"
+#include "config.h"
 #include "tui.h"
+#include "util.h"
+#include <jansson.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 void
 page_main_menu (void)
@@ -21,10 +23,6 @@ page_main_menu (void)
   print_left_text ("3. 退出");
 
   print_empty_line ();
-  print_block_text ("print_block_text 支持显示超长字符串，"
-                    "且会自动处理换行，可以在字符串中包含换行符。");
-
-  print_empty_line ();
   print_full_line ();
 }
 
@@ -38,7 +36,7 @@ page_main (void)
       printf ("输入数字选择操作，输入 q 退出: ");
 
     input:
-      input = getchar ();
+      input = get_alnum ();
       switch (input)
         {
         case '1':
@@ -49,7 +47,7 @@ page_main (void)
           break;
         case '3':
         case 'q':
-          exit (0);
+          return;
         default:
           goto input;
         }
@@ -90,6 +88,73 @@ page_student_menu (void)
 }
 
 void
+page_student_new (void)
+{
+  print_char ('\n', 2);
+  printf ("请填写学生信息 (按 ESC 返回, ENTER 确认)\n\n");
+
+  char id[MAX_STUDENT_ID + 1];
+  char name[MAX_STUDENT_NAME + 1];
+  char number[MAX_STUDENT_NUMBER + 1];
+
+get_id:
+  printf ("请输入学生学号 (不多于 %d 个数字): ", MAX_STUDENT_ID);
+  for (;;)
+    switch (get_id (id, MAX_STUDENT_ID))
+      {
+      case GET_ESC:
+        return;
+      case GET_EMPTY:
+        continue;
+      case GET_SUCCESS:
+        goto get_name;
+      }
+
+get_name:
+  printf ("\n请输入学生昵称 (不多于 %d 个字节): ", MAX_STUDENT_NAME);
+  for (;;)
+    switch (get_str (name, MAX_STUDENT_NAME))
+      {
+      case GET_ESC:
+        return;
+      case GET_EMPTY:
+        continue;
+      case GET_SUCCESS:
+        goto get_number;
+      }
+
+get_number:
+  printf ("\n请输入学生手机号 (不多于 %d 个数字): ", MAX_STUDENT_NUMBER);
+  for (;;)
+    switch (get_id (number, MAX_STUDENT_NUMBER))
+      {
+      case GET_ESC:
+        return;
+      case GET_EMPTY:
+        continue;
+      case GET_SUCCESS:
+        goto build_info;
+      }
+
+build_info:
+  if (json_object_get (table_student, id))
+    {
+      printf ("\n学号为: %s 的学生已经存在\n", id);
+      goto get_id;
+    }
+
+  json_t *info = json_object ();
+  if (info)
+    {
+      json_object_set_new (info, "name", json_string (name));
+      json_object_set_new (info, "number", json_string (number));
+    }
+
+  json_object_set_new (table_student, id, info);
+  save (table_student, file_student);
+}
+
+void
 page_student (void)
 {
   for (;;)
@@ -99,10 +164,11 @@ page_student (void)
       printf ("输入数字选择操作，输入 q 返回: ");
 
     input:
-      input = getchar ();
+      input = get_alnum ();
       switch (input)
         {
         case '1':
+          page_student_new ();
           break;
         case '2':
           break;
@@ -167,7 +233,7 @@ page_merchant (void)
       printf ("输入数字选择操作，输入 q 返回: ");
 
     input:
-      input = getchar ();
+      input = get_alnum ();
       switch (input)
         {
         case '1':

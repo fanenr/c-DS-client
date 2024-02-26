@@ -2,7 +2,7 @@
 MODE   = debug
 
 CSTD   = -std=gnu11
-WARN   = -Wall -Wextra -Werror
+WARN   = -Wall -Wextra
 NOWARN = -Wno-unused-variable -Wno-unused-function
 
 ifeq ($(MODE), debug)

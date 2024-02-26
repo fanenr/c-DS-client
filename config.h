@@ -15,12 +15,20 @@
 #define PATH_TABLE_MERCHANT "./merchant.json"
 #define PATH_TABLE_EVALUATION "./evaluation.json"
 
-/* 
+/*
  * TUI 配置信息
  */
 
 #define TUI_FRAME_CHAR '*'
 #define TUI_FRAME_WIDTH 60
 #define TUI_NASCII_WIDTH 2
+
+/*
+ * 信息条目配置
+ */
+
+#define MAX_STUDENT_ID 12
+#define MAX_STUDENT_NAME 24
+#define MAX_STUDENT_NUMBER 11
 
 #endif

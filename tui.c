@@ -1,9 +1,16 @@
 #include "tui.h"
 #include "config.h"
+#include <bits/types/mbstate_t.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
+#include <wctype.h>
+
+#define KEY_BACKSPACE 127
+#define KEY_ENTER 10
+#define KEY_ESC 27
 
 static inline size_t
 width_of (const char *text)
@@ -114,7 +121,7 @@ print_block_text (const char *text)
           goto newline;
         }
 
-      char unicode[6];
+      char unicode[5];
       size_t len = mbrlen (ptr, end - ptr, &state);
       switch (len)
         {
@@ -165,4 +172,132 @@ print_left_text (const char *text)
   print_char (' ', right);
   putchar (TUI_FRAME_CHAR);
   putchar ('\n');
+}
+
+char
+get_ascii (void)
+{
+  for (;;)
+    {
+      wint_t ch = getwchar ();
+      if (isascii (ch))
+        return ch;
+    }
+}
+
+char
+get_digit (void)
+{
+  for (;;)
+    {
+      char ch = get_ascii ();
+      if (isdigit (ch))
+        return ch;
+    }
+}
+
+char
+get_alnum (void)
+{
+  for (;;)
+    {
+      char ch = get_ascii ();
+      if (isalnum (ch))
+        return ch;
+    }
+}
+
+int
+get_id (char *buff, size_t max)
+{
+  size_t len = 0;
+  for (;;)
+    {
+      int ch = get_ascii ();
+
+      if (ch == KEY_ESC)
+        return GET_ESC;
+
+      if (ch == KEY_ENTER)
+        {
+          if (!len)
+            return GET_EMPTY;
+          return GET_SUCCESS;
+        }
+
+      if (ch == KEY_BACKSPACE)
+        {
+          if (len)
+            {
+              buff[--len] = '\0';
+              printf ("\b \b");
+            }
+          continue;
+        }
+
+      if (!isdigit (ch) || len >= max)
+        continue;
+
+      buff[len++] = ch;
+      buff[len] = '\0';
+      putchar (ch);
+    }
+}
+
+int
+get_str (char *buff, size_t max)
+{
+  size_t len = 0;
+  size_t num = 0;
+  wchar_t temp[max + 1];
+  char mbstr[MB_CUR_MAX + 1];
+
+  for (;;)
+    {
+      wint_t wch = getwchar ();
+      if (wch == WEOF)
+        {
+          printf ("非法 UTF-8 字符\n");
+          abort ();
+        }
+
+      if (isascii (wch))
+        {
+          if (wch == KEY_ESC)
+            return GET_ESC;
+
+          if (wch == KEY_ENTER)
+            {
+              if (!num)
+                return GET_EMPTY;
+              if (wcstombs (buff, temp, max) != (size_t)-1)
+                return GET_SUCCESS;
+              printf ("字符串重编码失败\n");
+              abort ();
+            }
+
+          if (wch == KEY_BACKSPACE)
+            {
+              if (num)
+                {
+                  size_t bytes = wctomb (mbstr, temp[--num]);
+                  temp[num] = 0;
+                  len -= bytes;
+                  int width = (bytes == 1) ? 1 : TUI_NASCII_WIDTH;
+                  for (int i = 0; i < width; i++)
+                    printf ("\b \b");
+                }
+              continue;
+            }
+        }
+
+      size_t bytes = wctomb (mbstr, wch);
+      if (len >= max || len + bytes > max)
+        continue;
+
+      printf ("%lc", wch);
+      temp[num++] = wch;
+      temp[num] = 0;
+      len += bytes;
+    }
 }

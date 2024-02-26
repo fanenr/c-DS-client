@@ -6,4 +6,5 @@ main (void)
 {
   check_and_init ();
   page_main ();
+  deinit ();
 }
