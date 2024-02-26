@@ -1,13 +1,13 @@
 include config.mk
-LDFLAGS += -ljansson
 
-headers := tui.h util.h page.h config.h
+proj_libs := -ljansson
+headers   := tui.h util.h page.h config.h
 
 .PHONY: all
 all: proj
 
-proj:	main.o page.o util.o tui.o
-	gcc $(LDFLAGS) -o $@ $^
+proj: main.o page.o util.o tui.o
+	gcc $(LDFLAGS) $(proj_libs) -o $@ $^
 
 main.o: main.c $(headers)
 	gcc $(CFLAGS) -c $<
@@ -18,7 +18,7 @@ page.o: page.c $(headers)
 tui.o: tui.c $(headers)
 	gcc $(CFLAGS) -c $<
 
-util.o:	util.c $(headers)
+util.o: util.c $(headers)
 	gcc $(CFLAGS) -c $<
 
 .PHONY: clean

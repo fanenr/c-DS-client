@@ -13,12 +13,16 @@ page_main_menu (void)
   print_center_text ("食堂菜品管理系统");
   print_empty_line ();
 
-  print_full_line ();
+  print_split_line ();
   print_empty_line ();
 
   print_left_text ("1. 学生操作");
   print_left_text ("2. 商户操作");
   print_left_text ("3. 退出");
+
+  print_empty_line ();
+  print_block_text ("print_block_text 支持显示超长字符串，"
+                    "且会自动处理换行，可以在字符串中包含换行符。");
 
   print_empty_line ();
   print_full_line ();
@@ -62,7 +66,7 @@ page_student_menu (void)
   print_center_text ("学生操作");
   print_empty_line ();
 
-  print_full_line ();
+  print_split_line ();
   print_empty_line ();
 
   print_left_text ("1. 新增学生信息");
@@ -131,7 +135,7 @@ page_merchant_menu (void)
   print_center_text ("商户操作");
   print_empty_line ();
 
-  print_full_line ();
+  print_split_line ();
   print_empty_line ();
 
   print_left_text ("1. 新增商户信息");

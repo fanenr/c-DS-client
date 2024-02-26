@@ -6,6 +6,7 @@ proj
 
 # other
 *.json
+.gdb_history
 
 # directory
 !/**/
