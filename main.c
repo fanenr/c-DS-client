@@ -4,7 +4,7 @@
 int
 main (void)
 {
-  check_and_init ();
+  init ();
   page_main ();
   deinit ();
 }

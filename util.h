@@ -15,9 +15,17 @@ extern json_t *table_merchant;
 extern json_t *table_evaluation;
 
 /*
- * 检查信息表文件并初始化
+ * 遇到致命错误并退出
  */
-extern void check_and_init (void);
+extern void eprintf (const char *fmt, ...)
+    __attribute__ ((noreturn, format (printf, 1, 2)));
+
+#define error(FMT, ...) eprintf ("%s: " FMT "\n", __FUNCTION__, ##__VA_ARGS__)
+
+/*
+ * 检查信息表并初始化
+ */
+extern void init (void);
 
 /*
  * 程序析构并释放资源

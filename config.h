@@ -22,6 +22,7 @@
 #define TUI_FRAME_CHAR '*'
 #define TUI_FRAME_WIDTH 60
 #define TUI_NASCII_WIDTH 2
+#define TUI_TEXT_PADDING 2
 
 /*
  * 信息条目配置

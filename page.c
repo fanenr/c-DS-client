@@ -90,8 +90,8 @@ page_student_menu (void)
 void
 page_student_new (void)
 {
-  print_char ('\n', 2);
-  printf ("请填写学生信息 (按 ESC 返回, ENTER 确认)\n\n");
+  print_char ('\n', 3);
+  printf ("请填写学生信息 (按 ESC 返回, ENTER 确认)\n");
 
   char id[MAX_STUDENT_ID + 1];
   char name[MAX_STUDENT_NAME + 1];
@@ -107,11 +107,12 @@ get_id:
       case GET_EMPTY:
         continue;
       case GET_SUCCESS:
+        putchar ('\n');
         goto get_name;
       }
 
 get_name:
-  printf ("\n请输入学生昵称 (不多于 %d 个字节): ", MAX_STUDENT_NAME);
+  printf ("请输入学生昵称 (不多于 %d 个字节): ", MAX_STUDENT_NAME);
   for (;;)
     switch (get_str (name, MAX_STUDENT_NAME))
       {
@@ -120,11 +121,12 @@ get_name:
       case GET_EMPTY:
         continue;
       case GET_SUCCESS:
+        putchar ('\n');
         goto get_number;
       }
 
 get_number:
-  printf ("\n请输入学生手机号 (不多于 %d 个数字): ", MAX_STUDENT_NUMBER);
+  printf ("请输入学生手机号 (不多于 %d 个数字): ", MAX_STUDENT_NUMBER);
   for (;;)
     switch (get_id (number, MAX_STUDENT_NUMBER))
       {
@@ -133,24 +135,28 @@ get_number:
       case GET_EMPTY:
         continue;
       case GET_SUCCESS:
+        putchar ('\n');
         goto build_info;
       }
 
 build_info:
   if (json_object_get (table_student, id))
     {
-      printf ("\n学号为: %s 的学生已经存在\n", id);
+      printf ("学号为: %s 的学生已经存在\n\n", id);
       goto get_id;
     }
 
   json_t *info = json_object ();
-  if (info)
-    {
-      json_object_set_new (info, "name", json_string (name));
-      json_object_set_new (info, "number", json_string (number));
-    }
+  if (!info)
+    error ("json_object failed");
 
-  json_object_set_new (table_student, id, info);
+  if (0 != json_object_set_new (info, "name", json_string (name)))
+    error ("json_object_set_new for name failed");
+  if (0 != json_object_set_new (info, "number", json_string (number)))
+    error ("json_object_set_new for number failed");
+  if (0 != json_object_set_new (table_student, id, info))
+    error ("json_object_set_new for %s failed", id);
+
   save (table_student, file_student);
 }
 

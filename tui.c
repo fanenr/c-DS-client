@@ -1,43 +1,44 @@
 #include "tui.h"
 #include "config.h"
-#include <bits/types/mbstate_t.h>
+#include "util.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
-#include <wctype.h>
 
-#define KEY_BACKSPACE 127
-#define KEY_ENTER 10
 #define KEY_ESC 27
+#define KEY_ENTER 10
+#define KEY_BACKSPACE 127
 
 static inline size_t
 width_of (const char *text)
 {
-  mbstate_t state;
-  memset (&state, 0, sizeof (mbstate_t));
-
   size_t width = 0;
   const char *end = text + strlen (text);
 
   for (const char *ptr = text; ptr < end;)
     {
-      size_t len = mbrlen (ptr, end - ptr, &state);
+      size_t len = mblen (ptr, end - ptr);
       switch (len)
         {
         case (size_t)-1:
         case (size_t)-2:
-          printf ("非法 UTF-8 字符串\n");
-          abort ();
+          error ("字符串 %s 编码错误", text);
+
         case 0:
+          /* NULL */
           return width;
+
         case 1:
+          /* ASCII */
           width++;
           ptr += 1;
           break;
+
         default:
-          width += 2;
+          /* UNICODE */
+          width += TUI_NASCII_WIDTH;
           ptr += len;
           break;
         }
@@ -51,6 +52,13 @@ print_char (char ch, size_t times)
 {
   for (size_t i = 0; i < times; i++)
     putchar (ch);
+}
+
+void
+print_str (const char *str, size_t times)
+{
+  for (size_t i = 0; i < times; i++)
+    printf ("%s", str);
 }
 
 void
@@ -82,14 +90,22 @@ void
 print_center_text (const char *text)
 {
   size_t width = width_of (text);
+  if (width + (1 + TUI_TEXT_PADDING) * 2 > TUI_FRAME_WIDTH)
+    error ("文本 %s 过长", text);
+
+  if (strchr (text, '\n') != NULL)
+    error ("文本 %s 含有换行符", text);
+
   putchar (TUI_FRAME_CHAR);
-  size_t left = (TUI_FRAME_WIDTH - width - 2) / 2;
+  print_char (' ', TUI_TEXT_PADDING);
+  size_t left = TUI_FRAME_WIDTH / 2 - TUI_TEXT_PADDING - 1 - width / 2;
   print_char (' ', left);
 
   printf ("%s", text);
 
-  size_t right = TUI_FRAME_WIDTH - left - width - 2;
+  size_t right = TUI_FRAME_WIDTH - (1 + TUI_TEXT_PADDING) * 2 - width - left;
   print_char (' ', right);
+  print_char (' ', TUI_TEXT_PADDING);
   putchar (TUI_FRAME_CHAR);
   putchar ('\n');
 }
@@ -97,42 +113,34 @@ print_center_text (const char *text)
 void
 print_block_text (const char *text)
 {
+  wchar_t wch;
   size_t width = 0;
+  size_t width_wch = 1;
   const char *end = text + strlen (text);
-
-  mbstate_t state;
-  memset (&state, 0, sizeof (mbstate_t));
 
   for (const char *ptr = text; ptr < end;)
     {
     newline:
-      if (width < 3)
+      if (width < 1 + TUI_TEXT_PADDING)
         {
-          printf ("%c  ", TUI_FRAME_CHAR);
-          width += 3;
-        }
-
-      if (width + 2 + 3 > TUI_FRAME_WIDTH)
-        {
-          print_char (' ', TUI_FRAME_WIDTH - width - 1);
           putchar (TUI_FRAME_CHAR);
-          putchar ('\n');
-          width = 0;
-          goto newline;
+          print_char (' ', TUI_TEXT_PADDING);
+          width += 1 + TUI_TEXT_PADDING;
         }
 
-      char unicode[5];
-      size_t len = mbrlen (ptr, end - ptr, &state);
-      switch (len)
+      size_t bytes = mbtowc (&wch, ptr, end - ptr);
+      switch (bytes)
         {
-        case (size_t)-1:
         case (size_t)-2:
+        case (size_t)-1:
           printf ("非法 UTF-8 字符串\n");
           abort ();
+
         case 0:
           goto end;
+
         case 1:
-          if (*ptr == '\n')
+          if (wch == '\n')
             {
               print_char (' ', TUI_FRAME_WIDTH - width - 1);
               putchar (TUI_FRAME_CHAR);
@@ -141,16 +149,21 @@ print_block_text (const char *text)
               ptr += 1;
               goto newline;
             }
-          putchar (*ptr);
-          width++;
-          ptr += 1;
-          break;
+          __attribute__ ((fallthrough));
+
         default:
-          strncpy (unicode, ptr, len);
-          unicode[len] = '\0';
-          printf ("%s", unicode);
-          width += TUI_NASCII_WIDTH;
-          ptr += len;
+          width_wch = (bytes == 1) ? 1 : TUI_NASCII_WIDTH;
+          if (width + width_wch + TUI_TEXT_PADDING + 1 > TUI_FRAME_WIDTH)
+            {
+              print_char (' ', TUI_FRAME_WIDTH - width - 1);
+              putchar (TUI_FRAME_CHAR);
+              putchar ('\n');
+              width = 0;
+              goto newline;
+            }
+          printf ("%lc", wch);
+          width += width_wch;
+          ptr += bytes;
           break;
         }
     }
@@ -165,11 +178,20 @@ void
 print_left_text (const char *text)
 {
   size_t width = width_of (text);
-  putchar (TUI_FRAME_CHAR);
-  printf ("  %s", text);
+  if (width + (1 + TUI_TEXT_PADDING) * 2 > TUI_FRAME_WIDTH)
+    error ("文本 %s 过长", text);
 
-  size_t right = TUI_FRAME_WIDTH - width - 4;
+  if (strchr (text, '\n') != NULL)
+    error ("文本 %s 含有换行符", text);
+
+  putchar (TUI_FRAME_CHAR);
+  print_char (' ', TUI_TEXT_PADDING);
+
+  printf ("%s", text);
+
+  size_t right = TUI_FRAME_WIDTH - width - (1 + TUI_TEXT_PADDING) * 2;
   print_char (' ', right);
+  print_char (' ', TUI_TEXT_PADDING);
   putchar (TUI_FRAME_CHAR);
   putchar ('\n');
 }
@@ -213,7 +235,7 @@ get_id (char *buff, size_t max)
   size_t len = 0;
   for (;;)
     {
-      int ch = get_ascii ();
+      char ch = get_ascii ();
 
       if (ch == KEY_ESC)
         return GET_ESC;
@@ -256,10 +278,7 @@ get_str (char *buff, size_t max)
     {
       wint_t wch = getwchar ();
       if (wch == WEOF)
-        {
-          printf ("非法 UTF-8 字符\n");
-          abort ();
-        }
+        error ("无法从控制台读取数据");
 
       if (isascii (wch))
         {
@@ -272,8 +291,7 @@ get_str (char *buff, size_t max)
                 return GET_EMPTY;
               if (wcstombs (buff, temp, max) != (size_t)-1)
                 return GET_SUCCESS;
-              printf ("字符串重编码失败\n");
-              abort ();
+              error ("字符串 %ls 重编码失败", temp);
             }
 
           if (wch == KEY_BACKSPACE)
@@ -281,11 +299,10 @@ get_str (char *buff, size_t max)
               if (num)
                 {
                   size_t bytes = wctomb (mbstr, temp[--num]);
+                  size_t width = (bytes == 1) ? 1 : TUI_NASCII_WIDTH;
+                  print_str ("\b \b", width);
                   temp[num] = 0;
                   len -= bytes;
-                  int width = (bytes == 1) ? 1 : TUI_NASCII_WIDTH;
-                  for (int i = 0; i < width; i++)
-                    printf ("\b \b");
                 }
               continue;
             }
