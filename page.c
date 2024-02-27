@@ -1,7 +1,7 @@
 #include "page.h"
 #include "config.h"
+#include "table.h"
 #include "tui.h"
-#include "util.h"
 #include <jansson.h>
 #include <stdio.h>
 
@@ -115,22 +115,18 @@ get_id:
       }
 
 get_name:
-  if (mode == 1)
+  info = find_by (table_student, NULL, "id", TYP_STR, id);
+  if (mode == 1 && info)
     {
-      if (json_object_get (table_student, id))
-        {
-          printf ("学号为: %s 的学生已经存在\n\n", id);
-          goto get_id;
-        }
+      printf ("学号为: %s 的学生已经存在\n\n", id);
+      goto get_id;
     }
-  if (mode == 3)
+  if (mode == 3 && !info)
     {
-      if (!(info = json_object_get (table_student, id)))
-        {
-          printf ("学号为: %s 的学生不存在\n\n", id);
-          goto get_id;
-        }
+      printf ("学号为: %s 的学生不存在\n\n", id);
+      goto get_id;
     }
+
   printf ("请输入学生昵称 (不多于 %d 个字节): ", MAX_STUDENT_NAME);
   for (;;)
     switch (get_str (name, MAX_STUDENT_NAME))
@@ -160,18 +156,15 @@ get_number:
 
 build_info:
   if (mode == 1)
-    {
-      if (!(info = json_object ()))
-        error ("json_object failed");
-    }
-  if (0 != json_object_set_new (info, "name", json_string (name)))
-    error ("json_object_set_new for name failed");
-  if (0 != json_object_set_new (info, "number", json_string (number)))
-    error ("json_object_set_new for number failed");
+    info = object_new ();
+
+  object_set (info, "name", TYP_STR, name);
+  object_set (info, "number", TYP_STR, number);
+
   if (mode == 1)
     {
-      if (0 != json_object_set_new (table_student, id, info))
-        error ("json_object_set_new for %s failed", id);
+      object_set (info, "id", TYP_STR, id);
+      array_add (table_student, info);
     }
 
   save (table_student, PATH_TABLE_STUDENT);
@@ -182,11 +175,12 @@ page_student_look (int mode)
 {
   print_char ('\n', 3);
 
+  size_t idx;
   json_t *info = NULL;
   char id[MAX_STUDENT_ID + 1];
 
 get_id:
-  printf ("请输入学生学号 (按 ESC 返回, ENTER 确认):");
+  printf ("请输入学生学号 (按 ESC 返回, ENTER 确认): ");
   for (;;)
     switch (get_id (id, MAX_STUDENT_ID))
       {
@@ -196,18 +190,19 @@ get_id:
         continue;
       case GET_SUCCESS:
         putchar ('\n');
-        goto del_info;
+        goto handle_info;
       }
 
-del_info:
-  if (!(info = json_object_get (table_student, id)))
+handle_info:
+  info = find_by (table_student, &idx, "id", TYP_STR, id);
+  if (!info)
     {
       printf ("学号为: %s 的学生不存在\n\n", id);
       goto get_id;
     }
 
-  json_t *name = json_object_get (info, "name");
-  json_t *number = json_object_get (info, "number");
+  json_t *name = object_get (info, "name");
+  json_t *number = object_get (info, "number");
 
   putchar ('\n');
   printf ("学生学号: %s\n", id);
@@ -230,8 +225,7 @@ del_info:
           }
         if (mode == 4)
           {
-            if (0 != json_object_del (table_student, id))
-              error ("json_object_del failed");
+            array_del (table_student, idx);
             save (table_student, PATH_TABLE_STUDENT);
           }
         return;
@@ -312,6 +306,11 @@ page_merchant_menu (void)
 
   print_empty_line ();
   print_full_line ();
+}
+
+void
+page_merchant_new (int mode)
+{
 }
 
 void

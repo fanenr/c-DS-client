@@ -6,7 +6,7 @@ headers   := tui.h util.h page.h config.h
 .PHONY: all
 all: proj
 
-proj: main.o page.o util.o tui.o
+proj: main.o page.o table.o util.o tui.o
 	gcc $(LDFLAGS) $(proj_libs) -o $@ $^
 
 main.o: main.c $(headers)
@@ -15,10 +15,13 @@ main.o: main.c $(headers)
 page.o: page.c $(headers)
 	gcc $(CFLAGS) -c $<
 
-tui.o: tui.c $(headers)
+table.o: table.c $(headers)
 	gcc $(CFLAGS) -c $<
 
 util.o: util.c $(headers)
+	gcc $(CFLAGS) -c $<
+
+tui.o: tui.c $(headers)
 	gcc $(CFLAGS) -c $<
 
 .PHONY: clean

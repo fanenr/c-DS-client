@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+extern void tui_init (void);
+
 extern void clear (void);
 
 extern void print_empty_line (void);

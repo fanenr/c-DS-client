@@ -2,14 +2,45 @@
 #include "config.h"
 #include "util.h"
 #include <ctype.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
 
+#if defined(__linux__)
+#include <termios.h>
+#include <unistd.h>
+#elif defined(_WIN32)
+#include <windows.h>
+#endif
+
 #define KEY_ESC 27
 #define KEY_ENTER 10
 #define KEY_BACKSPACE 127
+
+void
+tui_init (void)
+{
+  setlocale (LC_ALL, "en_US.utf8");
+
+  fwide (stdout, -1);
+  fwide (stderr, -1);
+  fwide (stdin, 1);
+
+#if defined(__linux__)
+  struct termios termios;
+  tcgetattr (STDIN_FILENO, &termios);
+  termios.c_lflag &= ~(ICANON | ECHO);
+  tcsetattr (STDIN_FILENO, TCSANOW, &termios);
+#elif defined(_WIN32)
+  DWORD mode;
+  HANDLE handle = GetStdHandle (STD_INPUT_HANDLE);
+  GetConsoleMode (handle, &mode);
+  mode &= ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+  SetConsoleMode (handle, mode);
+#endif
+}
 
 void
 clear (void)
@@ -20,9 +51,8 @@ clear (void)
 #elif defined(_WIN32)
   sys = system ("cls");
 #endif
-  if (sys == 0)
-    return;
-  error ("屏幕清空失败");
+  if (sys != 0)
+    error ("屏幕清空失败");
 }
 
 static inline size_t

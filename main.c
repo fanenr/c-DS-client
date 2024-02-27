@@ -1,10 +1,11 @@
 #include "page.h"
-#include "util.h"
+#include "table.h"
+#include "tui.h"
 
 int
 main (void)
 {
-  init ();
+  tui_init ();
+  table_init ();
   page_main ();
-  deinit ();
 }
