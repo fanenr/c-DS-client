@@ -11,6 +11,20 @@
 #define KEY_ENTER 10
 #define KEY_BACKSPACE 127
 
+void
+clear (void)
+{
+  int sys = 0;
+#if defined(__linux__)
+  sys = system ("clear");
+#elif defined(_WIN32)
+  sys = system ("cls");
+#endif
+  if (sys == 0)
+    return;
+  error ("屏幕清空失败");
+}
+
 static inline size_t
 width_of (const char *text)
 {

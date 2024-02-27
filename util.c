@@ -45,11 +45,6 @@ eprintf (const char *fmt, ...)
   exit (1);
 }
 
-FILE *file_menu;
-FILE *file_student;
-FILE *file_merchant;
-FILE *file_evaluation;
-
 static inline FILE *
 init_file (const char *path)
 {
@@ -89,6 +84,7 @@ init_table (FILE *file)
   if (!json_is_object (json))
     error ("json 格式错误");
 
+  fclose (file);
   return json;
 }
 
@@ -97,25 +93,15 @@ init (void)
 {
   init_terminal ();
 
-  file_menu = init_file (PATH_TABLE_MENU);
-  file_student = init_file (PATH_TABLE_STUDENT);
-  file_merchant = init_file (PATH_TABLE_MERCHANT);
-  file_evaluation = init_file (PATH_TABLE_EVALUATION);
-
-  table_menu = init_table (file_menu);
-  table_student = init_table (file_student);
-  table_merchant = init_table (file_merchant);
-  table_evaluation = init_table (file_evaluation);
+  table_menu = init_table (init_file (PATH_TABLE_MENU));
+  table_student = init_table (init_file (PATH_TABLE_STUDENT));
+  table_merchant = init_table (init_file (PATH_TABLE_MERCHANT));
+  table_evaluation = init_table (init_file (PATH_TABLE_EVALUATION));
 }
 
 void
 deinit (void)
 {
-  fclose (file_menu);
-  fclose (file_student);
-  fclose (file_merchant);
-  fclose (file_evaluation);
-
   json_decref (table_menu);
   json_decref (table_student);
   json_decref (table_merchant);
@@ -123,18 +109,20 @@ deinit (void)
 }
 
 void
-save (json_t *from, FILE *to)
+save (json_t *from, const char *to)
 {
-  char *str = json_dumps (from, 0);
+  char *str = json_dumps (from, JSON_INDENT (2));
   if (!str)
     error ("json 编码失败");
 
-  if (fseek (to, 0, SEEK_SET) != 0)
-    error ("文件流重定位失败");
+  FILE *file = fopen (to, "w+");
+  if (!file)
+    error ("文件 %s 打开失败", to);
 
   size_t len = strlen (str);
-  if (fwrite (str, len, 1, to) != 1)
+  if (fwrite (str, len, 1, file) != 1)
     error ("数据写入失败");
 
+  fclose (file);
   free (str);
 }

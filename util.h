@@ -35,6 +35,6 @@ extern void deinit (void);
 /*
  * 数据表化并存储
  */
-extern void save (json_t *from, FILE *to);
+extern void save (json_t *from, const char *to);
 
 #endif
