@@ -103,7 +103,7 @@ page_student_new (int mode)
 get_id:
   printf ("请输入学生学号 (不多于 %d 个数字): ", MAX_STUDENT_ID);
   for (;;)
-    switch (get_id (id, MAX_STUDENT_ID))
+    switch (get_int (id, MAX_STUDENT_ID))
       {
       case GET_ESC:
         return;
@@ -143,7 +143,7 @@ get_name:
 get_number:
   printf ("请输入学生电话 (不多于 %d 个数字): ", MAX_STUDENT_NUMBER);
   for (;;)
-    switch (get_id (number, MAX_STUDENT_NUMBER))
+    switch (get_int (number, MAX_STUDENT_NUMBER))
       {
       case GET_ESC:
         return;
@@ -182,7 +182,7 @@ page_student_look (int mode)
 get_id:
   printf ("请输入学生学号 (按 ESC 返回, ENTER 确认): ");
   for (;;)
-    switch (get_id (id, MAX_STUDENT_ID))
+    switch (get_int (id, MAX_STUDENT_ID))
       {
       case GET_ESC:
         return;
@@ -298,11 +298,12 @@ page_merchant_menu (void)
 
   print_left_text ("4. 发布菜品");
   print_left_text ("5. 更新菜品");
+  print_left_text ("6. 删除菜品");
 
   print_empty_line ();
 
-  print_left_text ("6. 浏览评价");
-  print_left_text ("7. 返回主页");
+  print_left_text ("7. 浏览评价");
+  print_left_text ("8. 返回主页");
 
   print_empty_line ();
   print_full_line ();
@@ -349,7 +350,7 @@ get_number:
 
   printf ("请输入商户电话 (不多于 %d 个数字): ", MAX_MERCHANT_NUMBER);
   for (;;)
-    switch (get_id (number, MAX_MERCHANT_NUMBER))
+    switch (get_int (number, MAX_MERCHANT_NUMBER))
       {
       case GET_ESC:
         return;
@@ -456,6 +457,11 @@ handle_info:
 }
 
 void
+page_dish_new (void)
+{
+}
+
+void
 page_merchant (void)
 {
   for (;;)
@@ -486,6 +492,8 @@ page_merchant (void)
         case '6':
           break;
         case '7':
+          break;
+        case '8':
         case 'q':
           return;
         default:

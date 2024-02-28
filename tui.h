@@ -28,7 +28,8 @@ enum
   GET_SUCCESS,
 };
 
-extern int get_id (char *buff, size_t max);
+extern int get_int (char *buff, size_t max);
+extern int get_num (char *buff, size_t max);
 extern int get_str (char *buff, size_t max);
 
 #endif

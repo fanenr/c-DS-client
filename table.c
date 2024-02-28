@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <string.h>
 
+json_t *info;
 json_t *table_menu;
 json_t *table_student;
 json_t *table_merchant;

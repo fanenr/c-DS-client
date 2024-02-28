@@ -3,6 +3,7 @@
 #include "util.h"
 #include <ctype.h>
 #include <locale.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -274,7 +275,7 @@ get_alnum (void)
 }
 
 int
-get_id (char *buff, size_t max)
+get_int (char *buff, size_t max)
 {
   size_t len = 0;
   for (;;)
@@ -303,6 +304,51 @@ get_id (char *buff, size_t max)
 
       if (!isdigit (ch) || len >= max)
         continue;
+
+      buff[len++] = ch;
+      buff[len] = '\0';
+      putchar (ch);
+    }
+}
+
+int
+get_num (char *buff, size_t max)
+{
+  size_t len = 0;
+  bool is_real = false;
+  for (;;)
+    {
+      char ch = get_ascii ();
+
+      if (ch == KEY_ESC)
+        return GET_ESC;
+
+      if (ch == KEY_ENTER)
+        {
+          if (!len)
+            return GET_EMPTY;
+          return GET_SUCCESS;
+        }
+
+      if (ch == KEY_BACKSPACE)
+        {
+          if (len)
+            {
+              buff[--len] = '\0';
+              printf ("\b \b");
+            }
+          continue;
+        }
+
+      if ((!isdigit (ch) && ch != '.') || len >= max)
+        continue;
+
+      if (ch == '.')
+        {
+          if (!len || is_real)
+            continue;
+          is_real = true;
+        }
 
       buff[len++] = ch;
       buff[len] = '\0';
@@ -350,6 +396,9 @@ get_str (char *buff, size_t max)
                 }
               continue;
             }
+
+          if (wch == ' ')
+            continue;
         }
 
       size_t bytes = wctomb (mbstr, wch);
