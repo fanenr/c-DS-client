@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wchar.h>
+#include <wctype.h>
 
 #if defined(__linux__)
 #include <termios.h>
@@ -56,7 +57,19 @@ clear (void)
     error ("屏幕清空失败");
 }
 
-static inline size_t
+void
+gotoxy (int x, int y)
+{
+#if defined(__linux__)
+  printf ("\033[%d;%dH", y, x);
+#elif defined(_WIN32)
+  COORD coord = { x, y };
+  HANDLE handle = GetStdHandle (STD_OUTPUT_HANDLE);
+  SetConsoleCursorPosition (handle, coord);
+#endif
+}
+
+size_t
 width_of (const char *text)
 {
   size_t width = 0;
@@ -135,11 +148,6 @@ void
 print_center_text (const char *text)
 {
   size_t width = width_of (text);
-  if (width + (1 + TUI_TEXT_PADDING) * 2 > TUI_FRAME_WIDTH)
-    error ("文本 %s 过长", text);
-
-  if (strchr (text, '\n') != NULL)
-    error ("文本 %s 含有换行符", text);
 
   putchar (TUI_FRAME_CHAR);
   print_char (' ', TUI_TEXT_PADDING);
@@ -178,8 +186,7 @@ print_block_text (const char *text)
         {
         case (size_t)-2:
         case (size_t)-1:
-          printf ("非法 UTF-8 字符串\n");
-          abort ();
+          error ("字符串 %s 编码错误", text);
 
         case 0:
           goto end;
@@ -223,12 +230,6 @@ void
 print_left_text (const char *text)
 {
   size_t width = width_of (text);
-  if (width + (1 + TUI_TEXT_PADDING) * 2 > TUI_FRAME_WIDTH)
-    error ("文本 %s 过长", text);
-
-  if (strchr (text, '\n') != NULL)
-    error ("文本 %s 含有换行符", text);
-
   putchar (TUI_FRAME_CHAR);
   print_char (' ', TUI_TEXT_PADDING);
 
@@ -275,92 +276,11 @@ get_alnum (void)
 }
 
 int
-get_int (char *buff, size_t max)
-{
-  size_t len = 0;
-  for (;;)
-    {
-      char ch = get_ascii ();
-
-      if (ch == KEY_ESC)
-        return GET_ESC;
-
-      if (ch == KEY_ENTER)
-        {
-          if (!len)
-            return GET_EMPTY;
-          return GET_SUCCESS;
-        }
-
-      if (ch == KEY_BACKSPACE)
-        {
-          if (len)
-            {
-              buff[--len] = '\0';
-              printf ("\b \b");
-            }
-          continue;
-        }
-
-      if (!isdigit (ch) || len >= max)
-        continue;
-
-      buff[len++] = ch;
-      buff[len] = '\0';
-      putchar (ch);
-    }
-}
-
-int
-get_num (char *buff, size_t max)
-{
-  size_t len = 0;
-  bool is_real = false;
-  for (;;)
-    {
-      char ch = get_ascii ();
-
-      if (ch == KEY_ESC)
-        return GET_ESC;
-
-      if (ch == KEY_ENTER)
-        {
-          if (!len)
-            return GET_EMPTY;
-          return GET_SUCCESS;
-        }
-
-      if (ch == KEY_BACKSPACE)
-        {
-          if (len)
-            {
-              buff[--len] = '\0';
-              printf ("\b \b");
-            }
-          continue;
-        }
-
-      if ((!isdigit (ch) && ch != '.') || len >= max)
-        continue;
-
-      if (ch == '.')
-        {
-          if (!len || is_real)
-            continue;
-          is_real = true;
-        }
-
-      buff[len++] = ch;
-      buff[len] = '\0';
-      putchar (ch);
-    }
-}
-
-int
-get_str (char *buff, size_t max)
+get_more (int typ, char *buff, size_t max)
 {
   size_t len = 0;
   size_t num = 0;
+  bool is_real = false;
   wchar_t temp[max + 1];
   char mbstr[MB_CUR_MAX + 1];
 
@@ -370,40 +290,61 @@ get_str (char *buff, size_t max)
       if (wch == WEOF)
         error ("无法从控制台读取数据");
 
-      if (isascii (wch))
+      switch (wch)
         {
-          if (wch == KEY_ESC)
-            return GET_ESC;
+        case KEY_ESC:
+          return GOT_ESC;
 
-          if (wch == KEY_ENTER)
-            {
-              if (!num)
-                return GET_EMPTY;
-              if (wcstombs (buff, temp, max) != (size_t)-1)
-                return GET_SUCCESS;
-              error ("字符串 %ls 重编码失败", temp);
-            }
+        case KEY_ENTER:
+          if (!num)
+            return GOT_EMPTY;
+          if (wcstombs (buff, temp, max + 1) == (size_t)-1)
+            error ("字符串 %ls 重编码失败", temp);
+          return GOT_SUCCESS;
 
-          if (wch == KEY_BACKSPACE)
-            {
-              if (num)
-                {
-                  size_t bytes = wctomb (mbstr, temp[--num]);
-                  size_t width = (bytes == 1) ? 1 : TUI_NASCII_WIDTH;
-                  print_str ("\b \b", width);
-                  temp[num] = 0;
-                  len -= bytes;
-                }
-              continue;
-            }
-
-          if (wch == ' ')
+        case KEY_BACKSPACE:
+          if (!num)
             continue;
+          size_t bytes = wctomb (mbstr, temp[--num]);
+          size_t width = (bytes == 1) ? 1 : TUI_NASCII_WIDTH;
+          print_str ("\b \b", width);
+          temp[num] = 0;
+          len -= bytes;
+          continue;
+        }
+
+      switch (typ)
+        {
+        case GET_INT:
+          if (!isdigit (wch))
+            continue;
+          break;
+
+        case GET_NUM:
+          if (!isdigit (wch) && wch != '.')
+            continue;
+          if (wch == '.')
+            if (!num || is_real)
+              continue;
+          break;
+
+        case GET_ALNUM:
+          if (!isalnum (wch))
+            continue;
+          break;
+
+        case GET_STRING:
+          if (isascii (wch) && !isprint (wch))
+            continue;
+          break;
         }
 
       size_t bytes = wctomb (mbstr, wch);
       if (len >= max || len + bytes > max)
         continue;
+
+      if (typ == GET_NUM && wch == '.')
+        is_real = true;
 
       printf ("%lc", wch);
       temp[num++] = wch;

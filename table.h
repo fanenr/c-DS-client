@@ -3,6 +3,7 @@
 
 #include <jansson.h>
 
+extern json_t *info;
 extern json_t *table_menu;
 extern json_t *table_student;
 extern json_t *table_merchant;

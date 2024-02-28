@@ -3,9 +3,11 @@
 
 #include <stddef.h>
 
+extern void gotoxy (int x, int y);
 extern void tui_init (void);
-
 extern void clear (void);
+
+extern size_t width_of (const char *text);
 
 extern void print_empty_line (void);
 extern void print_split_line (void);
@@ -23,13 +25,16 @@ extern char get_alnum (void);
 
 enum
 {
-  GET_ESC,
-  GET_EMPTY,
-  GET_SUCCESS,
+  GET_INT,
+  GET_NUM,
+  GET_ALNUM,
+  GET_STRING,
+
+  GOT_ESC,
+  GOT_EMPTY,
+  GOT_SUCCESS,
 };
 
-extern int get_int (char *buff, size_t max);
-extern int get_num (char *buff, size_t max);
-extern int get_str (char *buff, size_t max);
+extern int get_more (int typ, char *buff, size_t max);
 
 #endif
