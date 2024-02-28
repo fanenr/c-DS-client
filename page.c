@@ -292,7 +292,7 @@ page_merchant_menu (void)
   print_left_text ("1. 新增商户信息");
   print_left_text ("2. 查看商户信息");
   print_left_text ("3. 修改商户信息");
-  print_left_text ("3. 删除商户信息");
+  print_left_text ("4. 删除商户信息");
 
   print_empty_line ();
 
@@ -311,6 +311,148 @@ page_merchant_menu (void)
 void
 page_merchant_new (int mode)
 {
+  print_char ('\n', 3);
+  printf ("请填写商户信息 (按 ESC 返回, ENTER 确认)\n");
+
+  json_t *info = NULL;
+
+  char name[MAX_MERCHANT_NAME + 1];
+  char number[MAX_MERCHANT_NUMBER + 1];
+  char position[MAX_MERCHANT_POSITION + 1];
+
+get_name:
+  printf ("请输入商户名称 (不多于 %d 个字节): ", MAX_MERCHANT_NAME);
+  for (;;)
+    switch (get_str (name, MAX_MERCHANT_NAME))
+      {
+      case GET_ESC:
+        return;
+      case GET_EMPTY:
+        continue;
+      case GET_SUCCESS:
+        putchar ('\n');
+        goto get_number;
+      }
+
+get_number:
+  info = find_by (table_merchant, NULL, "name", TYP_STR, name);
+  if (mode == 1 && info)
+    {
+      printf ("商户 %s 已经存在\n\n", name);
+      goto get_name;
+    }
+  if (mode == 3 && !info)
+    {
+      printf ("商户 %s 不存在\n\n", name);
+      goto get_name;
+    }
+
+  printf ("请输入商户电话 (不多于 %d 个数字): ", MAX_MERCHANT_NUMBER);
+  for (;;)
+    switch (get_id (number, MAX_MERCHANT_NUMBER))
+      {
+      case GET_ESC:
+        return;
+      case GET_EMPTY:
+        continue;
+      case GET_SUCCESS:
+        putchar ('\n');
+        goto get_position;
+      }
+
+get_position:
+  printf ("请输入窗口位置 (不多于 %d 个字节): ", MAX_MERCHANT_POSITION);
+  for (;;)
+    switch (get_str (position, MAX_MERCHANT_POSITION))
+      {
+      case GET_ESC:
+        return;
+      case GET_EMPTY:
+        continue;
+      case GET_SUCCESS:
+        putchar ('\n');
+        goto build_info;
+      }
+
+build_info:
+  if (mode == 1)
+    info = object_new ();
+
+  object_set (info, "number", TYP_STR, number);
+  object_set (info, "position", TYP_STR, position);
+
+  if (mode == 1)
+    {
+      object_set (info, "name", TYP_STR, name);
+      array_add (table_merchant, info);
+    }
+
+  save (table_merchant, PATH_TABLE_MERCHANT);
+}
+
+void
+page_merchant_look (int mode)
+{
+  print_char ('\n', 3);
+
+  size_t idx;
+  json_t *info = NULL;
+  char name[MAX_MERCHANT_NAME + 1];
+
+get_name:
+  printf ("请输入商户名称 (按 ESC 返回, ENTER 确认): ");
+  for (;;)
+    switch (get_str (name, MAX_MERCHANT_NAME))
+      {
+      case GET_ESC:
+        return;
+      case GET_EMPTY:
+        continue;
+      case GET_SUCCESS:
+        putchar ('\n');
+        goto handle_info;
+      }
+
+handle_info:
+  info = find_by (table_merchant, &idx, "name", TYP_STR, name);
+  if (!info)
+    {
+      printf ("商户 %s 不存在\n\n", name);
+      goto get_name;
+    }
+
+  json_t *number = object_get (info, "number");
+  json_t *position = object_get (info, "position");
+
+  putchar ('\n');
+  printf ("商户名称: %s\n", name);
+  printf ("商户电话: %s\n", json_string_value (number));
+  printf ("窗口位置: %s\n\n", json_string_value (position));
+
+  if (mode == 2)
+    printf ("是否继续查看其他信息? (输入 y 确定, n 退出): ");
+  if (mode == 4)
+    printf ("是否确定删除该信息? (输入 y 确定, n 取消): ");
+
+  for (char ch;;)
+    switch ((ch = get_ascii ()))
+      {
+      case 'y':
+        if (mode == 2)
+          {
+            print_char ('\n', 2);
+            goto get_name;
+          }
+        if (mode == 4)
+          {
+            array_del (table_merchant, idx);
+            save (table_merchant, PATH_TABLE_MERCHANT);
+          }
+        return;
+      case 'n':
+      default:
+        return;
+      }
 }
 
 void
@@ -328,12 +470,16 @@ page_merchant (void)
       switch (input)
         {
         case '1':
+          page_merchant_new (1);
           break;
         case '2':
+          page_merchant_look (2);
           break;
         case '3':
+          page_merchant_new (3);
           break;
         case '4':
+          page_merchant_look (4);
           break;
         case '5':
           break;
