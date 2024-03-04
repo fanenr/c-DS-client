@@ -1,27 +1,19 @@
+MODE = debug
+
 include config.mk
 
+proj_srcs := main.c page.c table.c util.c tui.c
+proj_objs := $(proj_srcs:%.c=%.o)
 proj_libs := -ljansson
 headers   := tui.h util.h page.h config.h
 
 .PHONY: all
 all: proj
 
-proj: main.o page.o table.o util.o tui.o
+proj: $(proj_objs)
 	gcc $(LDFLAGS) $(proj_libs) -o $@ $^
 
-main.o: main.c $(headers)
-	gcc $(CFLAGS) -c $<
-
-page.o: page.c $(headers)
-	gcc $(CFLAGS) -c $<
-
-table.o: table.c $(headers)
-	gcc $(CFLAGS) -c $<
-
-util.o: util.c $(headers)
-	gcc $(CFLAGS) -c $<
-
-tui.o: tui.c $(headers)
+$(proj_objs): %.o: %.c $(headers)
 	gcc $(CFLAGS) -c $<
 
 .PHONY: clean
